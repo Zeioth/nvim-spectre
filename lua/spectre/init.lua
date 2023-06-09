@@ -181,7 +181,8 @@ function M.mapping_buffer(bufnr)
     api.nvim_buf_set_keymap(bufnr, 'n', 'o', 'ji', map_opt) -- don't append line on can make the UI wrong
     api.nvim_buf_set_keymap(bufnr, 'n', 'O', 'ki', map_opt)
     api.nvim_buf_set_keymap(bufnr, 'n', '?', "<cmd>lua require('spectre').show_help()<cr>", map_opt)
-
+    api.nvim_buf_set_keymap(bufnr, 'i', '<CR>', "", map_opt)
+    
     for _, map in pairs(state.user_config.mapping) do
         api.nvim_buf_set_keymap(bufnr, 'n', map.map, map.cmd, vim.tbl_deep_extend("force", map_opt, { desc = map.desc }))
     end
@@ -191,6 +192,32 @@ function M.mapping_buffer(bufnr)
         pattern = "*",
         callback = require('spectre').on_write,
         desc = "spectre write autocmd"
+    })
+    
+    -- avoid UI breakage by preventing backspace from jumping lines.
+    local backspace = vim.api.nvim_get_option('backspace')
+    local anti_insert_breakage_group = vim.api.nvim_create_augroup("SpectreAntiInsertBreakage", { clear = true })
+    vim.api.nvim_create_autocmd("InsertEnter", {
+        group = anti_insert_breakage_group,
+        pattern = "*",
+        callback = function()
+          local current_filetype = vim.bo.filetype
+          if current_filetype == "spectre_panel" then
+            vim.cmd("set backspace=indent,start")
+          end
+        end,
+        desc = "spectre anti-insert-breakage → protect the user from breaking the UI while on insert mode."
+    })
+    vim.api.nvim_create_autocmd({"WinLeave"}, {
+        group = anti_insert_breakage_group,
+        pattern = "*",
+        callback = function()
+          local current_filetype = vim.bo.filetype
+          if current_filetype == "spectre_panel" then
+            vim.cmd("set backspace=" .. backspace)
+          end
+        end,
+        desc = "spectre anti-insert-breakage → when leaving spectre restore the 'backspace' option."
     })
 end
 
@@ -225,6 +252,22 @@ M.on_search_change = function()
     if not can_edit_line() then return end
     local lines = api.nvim_buf_get_lines(state.bufnr, 0, config.lnum_UI, false)
 
+    -- Auto-heal the UI if damaged
+    for index, line in pairs(lines) do
+        if index == 1 and #line > 0 then
+            vim.cmd("Spectre")
+        end
+        if index == 2 and #line > 0 then
+            vim.cmd("Spectre")
+        end
+        if index == 4 and #line > 0 then
+            vim.cmd("Spectre")
+        end
+        if index == 6 and #line > 0 then
+            vim.cmd("Spectre")
+        end
+    end
+    
     local query = {
         replace_query = "",
         search_query  = "",
