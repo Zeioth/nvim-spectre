@@ -27,7 +27,7 @@ local utils = require('spectre.utils')
 local ui = require('spectre.ui')
 local log = require('spectre._log')
 local async = require('plenary.async')
-
+local highlight = require('spectre.highlight')
 local scheduler = async.util.scheduler
 
 local M = {}
